@@ -1,0 +1,34 @@
+version: 0.2
+
+env:
+  parameter-store:
+    DOCKER_REGISTRY_USERNAME: /pythonapp-ci/docker-credentials/username
+    DOCKER_REGISTRY_PASSWORD: /pythonapp-ci/docker-credentials/password
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+  pre_build:
+    commands:
+      - echo Logging in to Docker Hub...
+      - echo "Username is $DOCKER_REGISTRY_USERNAME"
+      - docker login --username $DOCKER_REGISTRY_USERNAME --password $DOCKER_REGISTRY_PASSWORD
+      - echo "Current directory:"
+      - pwd
+      - echo "Listing files:"
+      - ls -la
+      - cd ci-pipeline-demo
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      - docker build -t $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:latest .
+      - docker tag $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:latest $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:$CODEBUILD_RESOLVED_SOURCE_VERSION
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:latest
+      - docker push $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:$CODEBUILD_RESOLVED_SOURCE_VERSION
