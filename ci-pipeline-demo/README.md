@@ -132,11 +132,9 @@ hooks:
 
 ## Screenshots
 
-### CodeBuild Success
-![CodeBuild Success](images/codebuild-success.png)
+### CodeDeploy Success
+<img width="975" height="405" alt="image" src="https://github.com/user-attachments/assets/53fffab5-a681-4602-a67c-6dbd42fabb59" />
 
-### Docker Hub Push
-![Docker Hub Push](images/dockerhub-push-success.png)
 
 ## Common Issues
 - **SSM Access Denied**: Add SSM permissions to CodeBuild role
