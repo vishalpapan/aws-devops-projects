@@ -1,21 +1,9 @@
 #!/bin/bash
+set -e
 
-echo "Starting Flask application container..."
-
-# Pull the latest image from Docker Hub
-# Replace 'your-dockerhub-username' with actual username
-DOCKER_USERNAME="your-dockerhub-username"
-IMAGE_NAME="python-flask-aws-ci-app"
-
-echo "Pulling latest image from Docker Hub..."
-docker pull $DOCKER_USERNAME/$IMAGE_NAME:latest
-
-echo "Starting new container..."
-docker run -d \
-  --name flask-app \
-  -p 80:5000 \
-  --restart unless-stopped \
-  $DOCKER_USERNAME/$IMAGE_NAME:latest
-
-echo "Container started successfully!"
-echo "Application should be available at http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)"
+# Pull the Docker image from Docker Hub
+echo
+docker pull vishalpapan/python-flask-aws-ci-app:0840fbcf1ae4f8663b62d2f6f3920f68fc922a19
+# Run the Docker image as a container
+echo
+docker run -d -p 5000:5000 vishalpapan/python-flask-aws-ci-app:0840fbcf1ae4f8663b62d2f6f3920f68fc922a19

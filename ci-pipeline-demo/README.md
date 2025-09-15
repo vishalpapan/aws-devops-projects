@@ -11,28 +11,51 @@ ci-pipeline-demo/
 │   └── stop_container.sh   # Cleanup script
 ├── Dockerfile              # Container config
 ├── buildspec.yml           # CodeBuild config
-├── appspec.yml             # CodeDeploy config
 ├── requirements.txt        # Dependencies
 └── ec2-setup.md           # EC2 setup guide
 ```
 
-## Quick Setup Guide
+## CI/CD Flow Diagram
 
-### 1. Docker Hub Setup
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────────┐
+│   GitHub    │───▶│  CodeBuild   │───▶│ Docker Hub  │───▶│  CodeDeploy  │
+│   (Source)  │    │   (Build)    │    │  (Registry) │    │   (Deploy)   │
+└─────────────┘    └──────────────┘    └─────────────┘    └──────────────┘
+                                                                    │
+                                                                    ▼
+                                                           ┌──────────────┐
+                                                           │     EC2      │
+                                                           │ (Production) │
+                                                           └──────────────┘
+```
+
+## Setup Flow (Step by Step)
+
+### Phase 1: CI Setup (CodeBuild)
+
+**1. Docker Hub Setup**
 - Create Docker Hub access token
 - Store in AWS Parameter Store:
   - `/pythonapp-ci/docker-credentials/username`
   - `/pythonapp-ci/docker-credentials/password`
 
-### 2. CodeBuild Setup
+**2. CodeBuild Setup**
 1. Create CodeBuild project
 2. Connect to GitHub repo
 3. Enable Docker (Privileged mode)
 4. Add SSM permissions to service role
 
-### 3. EC2 Setup for CodeDeploy
+### Phase 2: CD Setup (CodeDeploy)
+
+**3. Create EC2 Instance**
+1. Launch EC2 instance (Amazon Linux 2)
+2. Add tags: `Environment: Production`, `Application: FlaskApp`
+3. Security Group: Allow HTTP (80), SSH (22)
+
+**4. Install CodeDeploy Agent on EC2**
 ```bash
-# Install CodeDeploy agent
+# SSH into EC2 and run:
 sudo yum update -y
 sudo yum install -y ruby wget docker
 wget https://aws-codedeploy-ap-south-1.s3.ap-south-1.amazonaws.com/latest/install
@@ -42,17 +65,26 @@ chmod +x ./install && sudo ./install auto
 sudo systemctl start docker
 sudo systemctl enable docker
 sudo usermod -a -G docker ec2-user
+
+# Verify agent
+sudo service codedeploy-agent status
 ```
 
-### 4. IAM Roles
-- **EC2 Role**: `AmazonEC2RoleforAWSCodeDeploy`
-- **CodeDeploy Role**: `AWSCodeDeployRole`
-- **CodeBuild Role**: SSM permissions for Parameter Store
+**5. Create IAM Roles**
+- **EC2 Instance Role**: `AmazonEC2RoleforAWSCodeDeploy`
+- **CodeDeploy Service Role**: `AWSCodeDeployRole`
+- Attach EC2 role to your instance
 
-### 5. CodeDeploy Setup
-1. Create CodeDeploy application
-2. Create deployment group with EC2 tags
-3. Update `scripts/start_container.sh` with your Docker Hub username
+**6. CodeDeploy Application Setup**
+1. Create CodeDeploy application: `code-deploy-test`
+2. Create deployment group: `new-deployment-group`
+3. Select EC2 instances by tags
+4. Choose service role created above
+
+**7. Deploy Application**
+- Repository: `vishalpapan/aws-devops-projects`
+- Commit ID: Latest commit hash
+- appspec.yml location: Root directory
 
 ## Pipeline Flow
 
@@ -83,17 +115,17 @@ phases:
       - docker push $DOCKER_REGISTRY_USERNAME/python-flask-aws-ci-app:latest
 ```
 
-**appspec.yml** - CodeDeploy configuration
+**appspec.yml** - CodeDeploy configuration (at root)
 ```yaml
 version: 0.0
 os: linux
 hooks:
   ApplicationStop:
-    - location: scripts/stop_container.sh
+    - location: ci-pipeline-demo/scripts/stop_container.sh
       timeout: 300
       runas: root
   AfterInstall:
-    - location: scripts/start_container.sh
+    - location: ci-pipeline-demo/scripts/start_container.sh
       timeout: 300
       runas: root
 ```

@@ -1,0 +1,12 @@
+version: 0.0
+os: linux
+
+hooks:
+  ApplicationStop:
+    - location: ci-pipeline-demo/scripts/stop_container.sh
+      timeout: 300
+      runas: root
+  AfterInstall:
+    - location: ci-pipeline-demo/scripts/start_container.sh
+      timeout: 300
+      runas: root
